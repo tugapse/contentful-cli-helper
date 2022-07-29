@@ -17,12 +17,18 @@ class Main {
       output: process.stdout,
     });
 
-    this.updater = new ContentUpdater(this.readLine);
-    this.menu = new Menu(this.readLine);
-
     this.readLine.on("close", function () {
       console.log(`Closing Script `);
       process.exit(0);
+    });
+
+    this.updater = new ContentUpdater(this.readLine);
+    this.menu = new Menu(this.readLine);
+
+    this.menu.addEventListener(MENUS.Update, async (eventData) => {
+      
+      await this.updater.parseMenuCommand(eventData);
+      this.menu.showUpdateMenu();
     });
   }
   run() {

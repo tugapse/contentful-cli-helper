@@ -6,7 +6,7 @@ class Menu {
     this.readLine = readLine;
   }
 
-  init() {}
+  init() { }
 
   createMenuOptions(menuOptions, initialText = "") {
     return menuOptions.reduce((prev, curr, index) => {
@@ -15,7 +15,10 @@ class Menu {
     }, initialText);
   }
 
-  showMainMenu = () => {
+  showMainMenu = (text = null) => {
+
+    if (text) console.log(text);
+
     const menuOptions = [
       "Exit script",
       "Update environment",
@@ -24,12 +27,15 @@ class Menu {
     ];
     const question = this.createMenuOptions(
       menuOptions,
-      "\nPlease select an action:\n "
+      "\n\nPlease select an action:\n "
     );
     this.readLine.question(question, this.handleMainSelection);
   };
 
-  showUpdateMenu = () => {
+  showUpdateMenu = (text = null) => {
+
+    if (text) console.log(text);
+
     const menuOptions = [
       "<-- Go back",
       "Update DEV to QA",
@@ -45,50 +51,48 @@ class Menu {
   };
 
   handleMainSelection = (answer) => {
-    switch (Number(answer)) {
-      case 0:
-        this.readLine.close();
-      case 1:
-        console.log("let's do the update!");
-        this.showUpdateMenu();
-        break;
-      case 2:
-      case 3:
-        console.log("Soon .... very soon ...");
-        this.showMainMenu();
-        break;
-      default:
-        console.log("Please Select a valid option");
-        this.showMainMenu();
-        break;
+    if (answer) {
+      switch (Number(answer)) {
+        case 0:
+          this.readLine.close();
+        case 1:
+          this.showUpdateMenu("let's do the update!");
+          break;
+        case 2:
+        case 3:
+          this.showMainMenu("Soon .... very soon ...");
+          break;
+        default:
+          this.showMainMenu("\nPlease Select a valid option");
+          break;
+      }
+      return;
     }
+    this.showMainMenu("\nPlease Select a valid option");
   };
 
   handleUpdateSelection = async (answer) => {
-    const actions = [
-      UPDATE_ACTION.DevToQa,
-      UPDATE_ACTION.QaToStaging,
-      UPDATE_ACTION.StagingToPreview,
-      UPDATE_ACTION.PreviewToLive,
-    ];
-    const selection = Number(answer);
-    switch (selection) {
-      case 0:
-        console.debug("Going back :)");
-        this.showMainMenu();
-        break;
-      case Number(selection <= actions.length):
-        console.log("Starting process, \nJust make a coffee and relax !");
-        this.emmit(MENUS.Update, selection);
-        // const result = await this.updater.updateEnvironment(
-        //   actions[selection - 1]
-        // );
-        break;
-      default:
-        console.log("Please Select a valid option");
-        break;
+    if (answer) {
+      const selection = Number(answer);
+      switch (selection) {
+        case 0:
+          this.showMainMenu("Going back :)");
+          break;
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+          console.log("Starting process, \nJust make a coffee and relax !");
+          this.emmit(MENUS.Update, selection);
+          break;
+        default:
+          this.showUpdateMenu("\nPlease Select a valid option");
+          break;
+      }
+      return;
     }
-    this.showMainMenu();
+    this.showUpdateMenu("\nPlease Select a valid option");
   };
 
   addEventListener(eventName, listener) {
