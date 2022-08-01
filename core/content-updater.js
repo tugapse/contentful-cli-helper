@@ -1,9 +1,10 @@
 const { exec } = require("child_process");
+const ConsoleHelper = require("./console-helper");
 
 const COMMANDS = {
   RemoveEnvironment: "contentful space environment delete",
   ListSpaces: "contentful space environment list",
-  USE_SPACE: `contentful space use`,
+  UseSpace: `contentful space use`,
   DEVtoQA: `contentful space environment create --name="qa" --environment-id="qa" --source="dev"`,
   FromToEnvironment: `contentful space import`,
   ExportEnvironment: `contentful space export`,
@@ -21,12 +22,13 @@ const ErrorMessages = {
 };
 
 
-class ContentUpdater {
+class ContentUpdater extends ConsoleHelper{
   readLine = null;
   spaceId = null;
   environmentHelper = null;
 
   constructor(readLine, environmentHelper) {
+    super();
     this.readLine = readLine;
     this.environmentHelper = environmentHelper;
   }
@@ -40,14 +42,14 @@ class ContentUpdater {
       UPDATE_ACTION.PreviewToLive,
     ];
     const result = await this.updateEnvironment(actions[+command]);
-    console.log(result);
+    this.print(result);
   }
 
   async useSpace(spaceId) {
     // TODO remove dev space ID
     this.spaceId = spaceId || "e6ntcn5odprs";
     const args = spaceId ? { "--space-id": this.spaceId } : null;
-    return this.runCommand(COMMANDS.USE_SPACE, args);
+    return this.runCommand(COMMANDS.UseSpace, args);
   }
 
   async updateEnvironment(updateAction) {
@@ -60,18 +62,18 @@ class ContentUpdater {
     const fromFname = await this.createEnvironmentBackup(from);
     const toFname = await this.createEnvironmentBackup(to);
 
-    const result = this.environmentHelper.checkDiferences(from, to, null, null);
-
+    const result = this.environmentHelper.checkDiferences(from, to, fromFname, toFname);
+    this.print("Checking done.")
     if (!result.equal) {
-      console.log(
-        `\n${result.resultString}\n[TRANSLATE] Temos algumas diferenças entre ${from} e ${to}!\n`
+      this.print(
+        `\n${result.resultString}\n> We have missing ContentModel Keys in ${to}!\n`
       );
       await this.wait("Press ENTER to continue...");
     }
 
     if (
       await this.ask(
-        `WARNING....\nAre you sure you want to do the update ${from} to ${to}?\n> `
+        `Are you sure you want to do the update ${from} to ${to}?\n> `.toUpperCase()
       )
     ) {
       return await this.runUpdateEnvironmentCommand(fromFname, to);
@@ -116,14 +118,14 @@ class ContentUpdater {
   }
 
   async removeEnvironment(env) {
-    console.log(`Trying to delete environment ${env}.`);
+    this.print(`Trying to delete environment ${env}.`);
     return this.runCommand(COMMANDS.RemoveEnvironment, {
       "--environment-id": env,
     });
   }
 
   async runUpdateEnvironmentCommand(fromFile, to) {
-    console.log(`\n\nStarting environment update. Let us pray !`);
+    this.print(`\n\nStarting environment update. Let us pray !`);
     return this.runCommand(COMMANDS.FromToEnvironment, {
       "--content-file": fromFile,
       "--environment-id": to,
@@ -131,7 +133,7 @@ class ContentUpdater {
   }
 
   async createEnvironmentBackup(env, verbose = false) {
-    console.log(`Creating backup of ${env} environment. Please wait!`);
+    this.print(`Creating backup of ${env} environment. Please wait!`);
     let filename = "";
     await this.runCommand(
       COMMANDS.ExportEnvironment,
@@ -142,9 +144,9 @@ class ContentUpdater {
         const index = output.indexOf("Stored space data to json file");
         if (index >= 0) {
           filename = this.sanitizeBackupFilename(output);
-          console.log("backup saved to >>", filename);
+          this.print("backup saved to >> " + filename);
         }
-        if (verbose) console.log(output);
+        if (verbose) this.print(output);
       }
     );
     return filename;
@@ -171,52 +173,9 @@ class ContentUpdater {
     }
   }
 
-  async catchError(childProcess, confirmOnErrorMessage) {
-    return new Promise((resolve, reject) => {
-      childProcess
-        .then(async (output) => {
-          if (output.error) {
-            (await this.ask(confirmOnErrorMessage))
-              ? resolve(output)
-              : reject(output.error);
-          }
-          resolve(output);
-        })
-        .catch((error) => {
-          //TODO do something here, log to file for example ....
-        });
-    });
-  }
+  
 
-  validateAnwser(awnser, correct) {
-    return (awnser || "n").toLowerCase() === (correct || "y").toLowerCase();
-  }
-
-  ask = async (question, questions = ["y", "n"], validOption = "y") => {
-    return new Promise((resolve, reject) => {
-      this.readLine.question(question, async (awnser) => {
-        if (
-          !questions
-            .map((op) => op.toLowerCase())
-            .includes(awnser.toLowerCase())
-        ) {
-          console.log("Please select a valid option", questions);
-          awnser = await this.ask(question, questions, validOption);
-        }
-        resolve(this.validateAnwser(awnser, validOption));
-        return awnser;
-      });
-    });
-  };
-
-  wait = async (question) => {
-    return new Promise((resolve, reject) => {
-      this.readLine.question(question, async (awnser) => {
-        resolve(null);
-        return null;
-      });
-    });
-  };
+ 
 }
 
 module.exports = { ContentUpdater, UPDATE_ACTION };

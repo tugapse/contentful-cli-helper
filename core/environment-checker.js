@@ -5,9 +5,9 @@ const ConsoleHelper = require('./console-helper');
 class EnvironmentHelper extends ConsoleHelper{
 
     checkDiferences(from, to, fromFile, toFile) {
-        console.log("\nChecking diferences: " + from + " -> " + to + ", please wait ...");
-        const fromObj = this.loadJsonObject("contentful-export-e6ntcn5odprs-qa-2022-07-29T17-34-42.json").contentTypes;
-        const toObj = this.loadJsonObject("contentful-export-e6ntcn5odprs-qa-2022-07-29T17-39-27.json").contentTypes;
+        this.print("Checking for misssing fields in " + to );
+        const fromObj = this.loadJsonObject(fromFile).contentTypes;
+        const toObj = this.loadJsonObject(toFile).contentTypes;
         return this.checkContentDiferences(fromObj, toObj);
     }
 
