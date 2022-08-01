@@ -1,5 +1,5 @@
 const fs = require('fs');
-const ConsoleHelper = require('./console-helper');
+const {ConsoleHelper} = require('./console-helper');
 
 
 class EnvironmentHelper extends ConsoleHelper{

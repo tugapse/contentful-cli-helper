@@ -9,6 +9,10 @@ const Spaces = {
 
 const Config = {
 
+debug:{
+  showShellCommands:false
+},
+
   getSpaceId: (environment) => {
     for (key in Environments) {
       if (Environments[key].includes(environment)) {

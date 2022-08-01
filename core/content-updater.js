@@ -1,5 +1,7 @@
 const { exec } = require("child_process");
-const ConsoleHelper = require("./console-helper");
+
+const Config = require("../config");
+const {ConsoleHelper, ConsoleColor} = require("./console-helper");
 
 const COMMANDS = {
   RemoveEnvironment: "contentful space environment delete",
@@ -22,10 +24,12 @@ const ErrorMessages = {
 };
 
 
-class ContentUpdater extends ConsoleHelper{
+class ContentUpdater extends ConsoleHelper {
   readLine = null;
   spaceId = null;
   environmentHelper = null;
+  tempBuffer = "";
+
 
   constructor(readLine, environmentHelper) {
     super();
@@ -45,19 +49,14 @@ class ContentUpdater extends ConsoleHelper{
     this.print(result);
   }
 
-  async useSpace(spaceId) {
-    // TODO remove dev space ID
-    this.spaceId = spaceId || "e6ntcn5odprs";
-    const args = spaceId ? { "--space-id": this.spaceId } : null;
-    return this.runCommand(COMMANDS.UseSpace, args);
-  }
+
 
   async updateEnvironment(updateAction) {
     if (!updateAction) {
       return "\n\nPlease provide a valid option!";
     }
 
-    await this.useSpace("e6ntcn5odprs");
+
     const { from, to } = this.parseFromToEnvironment(updateAction);
     const fromFname = await this.createEnvironmentBackup(from);
     const toFname = await this.createEnvironmentBackup(to);
@@ -71,20 +70,21 @@ class ContentUpdater extends ConsoleHelper{
       await this.wait("Press ENTER to continue...");
     }
 
-    if (
-      await this.ask(
-        `Are you sure you want to do the update ${from} to ${to}?\n> `.toUpperCase()
-      )
-    ) {
+    this.print(ConsoleColor.Yellow + `Are you sure you want to do the update ${from} to ${to} ?`.toUpperCase())
+    if ( await this.ask(ConsoleColor.Default+ "Confirm y/n: ") ) {
       return await this.runUpdateEnvironmentCommand(fromFname, to);
     }
-
+    this.line();
     return "I see, you are safe for now!";
   }
 
   runCommand = async (command, args = null, outputCallback = null) => {
     return new Promise((resolve, reject) => {
       const cmd = command + this.getCommandArgs(args);
+
+      if (Config.debug.showShellCommands)
+        this.print("Running command > " + cmd);
+
       const childP = exec(cmd, (error, output, errorString) => {
         if (error) resolve({ error, errorString });
         resolve(output);
@@ -118,6 +118,7 @@ class ContentUpdater extends ConsoleHelper{
   }
 
   async removeEnvironment(env) {
+    throw new Error("Do not use for now!");
     this.print(`Trying to delete environment ${env}.`);
     return this.runCommand(COMMANDS.RemoveEnvironment, {
       "--environment-id": env,
@@ -125,30 +126,38 @@ class ContentUpdater extends ConsoleHelper{
   }
 
   async runUpdateEnvironmentCommand(fromFile, to) {
-    this.print(`\n\nStarting environment update. Let us pray !`);
+    this.header(`Starting environment update. Let us pray !`);
     return this.runCommand(COMMANDS.FromToEnvironment, {
       "--content-file": fromFile,
       "--environment-id": to,
+      "--space-id": Config.getSpaceId(to)
+
     });
   }
 
+
   async createEnvironmentBackup(env, verbose = false) {
+    this.tempBuffer = "";
+    const spaceId = Config.getSpaceId(env);
     this.print(`Creating backup of ${env} environment. Please wait!`);
     let filename = "";
     await this.runCommand(
       COMMANDS.ExportEnvironment,
       {
         "--environment-id": env,
+        "--space-id": spaceId
       },
       (output) => {
+        this.tempBuffer += output;
         const index = output.indexOf("Stored space data to json file");
         if (index >= 0) {
           filename = this.sanitizeBackupFilename(output);
           this.print("backup saved to >> " + filename);
         }
-        if (verbose) this.print(output);
+        // if (verbose) console.log(output);
       }
     );
+    if (verbose) console.log(this.tempBuffer);
     return filename;
   }
 
@@ -173,9 +182,9 @@ class ContentUpdater extends ConsoleHelper{
     }
   }
 
-  
 
- 
+
+
 }
 
 module.exports = { ContentUpdater, UPDATE_ACTION };

@@ -1,4 +1,4 @@
-const ConsoleHelper = require("./console-helper");
+const {ConsoleHelper, ConsoleColor} = require("./console-helper");
 
 class Menu extends ConsoleHelper {
   events = {};
@@ -14,7 +14,7 @@ class Menu extends ConsoleHelper {
   createMenuOptions(menuOptions, initialText = "") {
     return menuOptions.reduce((prev, curr, index) => {
       const endLine = index === menuOptions.length - 1 ? "\n> " : "";
-      return `${prev} ${index} - ${curr} \n ${endLine}`;
+      return `${prev} ${ConsoleColor.Green} ${index}${ConsoleColor.Default} - ${curr} \n ${endLine}`;
     }, initialText);
   }
 
@@ -23,14 +23,14 @@ class Menu extends ConsoleHelper {
     if (text) console.log(text);
 
     const menuOptions = [
-      "Exit script",
+      ConsoleColor.Yellow + "Exit script",
       "Update environment",
       "Backup environment",
-      "Restore environment",
+      "Restore environment from file",
     ];
     const question = this.createMenuOptions(
       menuOptions,
-      "\n\nPlease select an action:\n "
+      ConsoleColor.Green + "Please select an action:\n "
     );
     this.readLine.question(question, this.handleMainSelection);
   };
@@ -40,7 +40,7 @@ class Menu extends ConsoleHelper {
     if (text) console.log(text);
 
     const menuOptions = [
-      "<-- Go back",
+      ConsoleColor.Yellow + "<-- Go back",
       "Update DEV to QA",
       "Update QA to Staging",
       "Update Staging to Preview",
@@ -48,25 +48,26 @@ class Menu extends ConsoleHelper {
     ];
     const question = this.createMenuOptions(
       menuOptions,
-      "\nSelect a environment to update:\n "
+      ConsoleColor.Green + "Select a environment to update:\n "
     );
     this.readLine.question(question, this.handleUpdateSelection);
   };
 
   handleMainSelection = (answer) => {
+    this.line();
     if (answer) {
       switch (Number(answer)) {
         case 0:
           this.readLine.close();
         case 1:
-          this.showUpdateMenu("let's do the update!");
+          this.showUpdateMenu(ConsoleColor.LightBlue + "let's do the update!");
           break;
         case 2:
         case 3:
-          this.showMainMenu("Soon .... very soon ...");
+          this.showMainMenu(ConsoleColor.Red + "Soon .... very soon ...");
           break;
         default:
-          this.showMainMenu("\nPlease Select a valid option");
+          this.showMainMenu(ConsoleColor.Yellow + "\nPlease Select a valid option");
           break;
       }
       return;
@@ -75,6 +76,7 @@ class Menu extends ConsoleHelper {
   };
 
   handleUpdateSelection = async (answer) => {
+    this.line();
     if (answer) {
       const selection = Number(answer);
       switch (selection) {
@@ -87,10 +89,10 @@ class Menu extends ConsoleHelper {
         case 4:
         case 5:
           this.header("Starting update process");
-          this.line("Just make a coffee and relax !")
+          this.print("Just make a coffee and relax !")
           this.emmit(MENUS.Update, selection);
           break;
-        default:
+          default:
           this.showUpdateMenu("\nPlease Select a valid option");
           break;
       }
