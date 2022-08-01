@@ -3,6 +3,7 @@ const readline = require("readline");
 const { ContentUpdater, UPDATE_ACTION } = require("./core/content-updater");
 const { Menu, MENUS } = require("./core/menu");
 const { EnvironmentHelper } = require("./core/environment-checker");
+const Config = require("./config");
 
 class Main {
   readLine = null;
