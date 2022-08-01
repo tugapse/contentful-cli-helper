@@ -1,8 +1,11 @@
-class Menu {
+const ConsoleHelper = require("./console-helper");
+
+class Menu extends ConsoleHelper {
   events = {};
   readLine = null;
 
   constructor(readLine) {
+    super();
     this.readLine = readLine;
   }
 
@@ -83,7 +86,8 @@ class Menu {
         case 3:
         case 4:
         case 5:
-          console.log("Starting process, \nJust make a coffee and relax !");
+          this.header("Starting update process");
+          this.line("Just make a coffee and relax !")
           this.emmit(MENUS.Update, selection);
           break;
         default:

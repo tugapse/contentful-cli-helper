@@ -2,6 +2,7 @@ const readline = require("readline");
 
 const { ContentUpdater, UPDATE_ACTION } = require("./core/content-updater");
 const { Menu, MENUS } = require("./core/menu");
+const { EnvironmentHelper } = require("./core/environment-checker");
 
 class Main {
   readLine = null;
@@ -12,31 +13,35 @@ class Main {
   constructor() {}
 
   init() {
-    this.readLine = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
-    });
+    this.initializeInputOutputBuffer();
 
-    this.readLine.on("close", function () {
-      console.log(`Closing Script `);
-      process.exit(0);
-    });
-
-    this.updater = new ContentUpdater(this.readLine);
     this.menu = new Menu(this.readLine);
-
+    this.updater = new ContentUpdater(this.readLine, new EnvironmentHelper());
     this.menu.addEventListener(MENUS.Update, async (eventData) => {
-      
-      await this.updater.parseMenuCommand(eventData);
-      this.menu.showUpdateMenu();
+      await this.updater.parseUpdateMenuCommand(eventData);
+      this.menu.showMainMenu();
     });
   }
+
   run() {
     this.init();
     this.menu.showMainMenu();
   }
 
-  close() {}
+  close = () => {
+    console.log("Closing script. Bye :)");
+    process.exit(0);
+  };
+
+  initializeInputOutputBuffer() {
+    console.log("Initializing Buffers ...");
+    this.readLine = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout,
+    });
+
+    this.readLine.on("close", () => this.close());
+  }
 }
 
 new Main().run();

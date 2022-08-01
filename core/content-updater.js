@@ -5,7 +5,7 @@ const COMMANDS = {
   ListSpaces: "contentful space environment list",
   USE_SPACE: `contentful space use`,
   DEVtoQA: `contentful space environment create --name="qa" --environment-id="qa" --source="dev"`,
-  FromToEnvironment: `contentful space import `,
+  FromToEnvironment: `contentful space import`,
   ExportEnvironment: `contentful space export`,
 };
 
@@ -20,16 +20,25 @@ const ErrorMessages = {
   CreateBackup: "Error creating the backup, continue anyway ? y / n \n>> ",
 };
 
+
 class ContentUpdater {
   readLine = null;
   spaceId = null;
+  environmentHelper = null;
 
-  constructor(readLine) {
+  constructor(readLine, environmentHelper) {
     this.readLine = readLine;
+    this.environmentHelper = environmentHelper;
   }
 
-  async parseMenuCommand(command) {
-    const actions = [null,UPDATE_ACTION.DevToQa,UPDATE_ACTION.QaToStaging,UPDATE_ACTION.StagingToPreview,UPDATE_ACTION.PreviewToLive];
+  async parseUpdateMenuCommand(command) {
+    const actions = [
+      null,
+      UPDATE_ACTION.DevToQa,
+      UPDATE_ACTION.QaToStaging,
+      UPDATE_ACTION.StagingToPreview,
+      UPDATE_ACTION.PreviewToLive,
+    ];
     const result = await this.updateEnvironment(actions[+command]);
     console.log(result);
   }
@@ -37,23 +46,38 @@ class ContentUpdater {
   async useSpace(spaceId) {
     // TODO remove dev space ID
     this.spaceId = spaceId || "e6ntcn5odprs";
-    const args = spaceId ? { "--space-id": spaceId } : null;
+    const args = spaceId ? { "--space-id": this.spaceId } : null;
     return this.runCommand(COMMANDS.USE_SPACE, args);
   }
 
-  async updateEnvironment(fromToEnvironment) {
+  async updateEnvironment(updateAction) {
+    if (!updateAction) {
+      return "\n\nPlease provide a valid option!";
+    }
 
-
-    const { from, to } = this.parseFromToEnvironment(fromToEnvironment);
     await this.useSpace("e6ntcn5odprs");
+    const { from, to } = this.parseFromToEnvironment(updateAction);
     const fromFname = await this.createEnvironmentBackup(from);
     const toFname = await this.createEnvironmentBackup(to);
 
-    if (await this.ask(`\n\nWARNING....\n\nAre you sure you want to do the update ${from} to ${to}?\n> `)) {
+    const result = this.environmentHelper.checkDiferences(from, to, null, null);
+
+    if (!result.equal) {
+      console.log(
+        `\n${result.resultString}\n[TRANSLATE] Temos algumas diferenças entre ${from} e ${to}!\n`
+      );
+      await this.wait("Press ENTER to continue...");
+    }
+
+    if (
+      await this.ask(
+        `WARNING....\nAre you sure you want to do the update ${from} to ${to}?\n> `
+      )
+    ) {
       return await this.runUpdateEnvironmentCommand(fromFname, to);
     }
-    return "\n\nI see, you are safe for now!"
 
+    return "I see, you are safe for now!";
   }
 
   runCommand = async (command, args = null, outputCallback = null) => {
@@ -79,7 +103,9 @@ class ContentUpdater {
   }
 
   async listEnvironments() {
+    throw new Error("Do not use for now!");
     await this.useSpace();
+
     const output = await this.runCommand(COMMANDS.ListSpaces);
     const environments = output.split("\n").reduce((acc, cur) => {
       if (cur.includes("90m")) return acc;
@@ -87,7 +113,6 @@ class ContentUpdater {
         return [...acc, cur];
       }
     }, []);
-    debugger;
   }
 
   async removeEnvironment(env) {
@@ -98,32 +123,37 @@ class ContentUpdater {
   }
 
   async runUpdateEnvironmentCommand(fromFile, to) {
-    console.log(`Starting environment update.\nLet us pray !`);
+    console.log(`\n\nStarting environment update. Let us pray !`);
     return this.runCommand(COMMANDS.FromToEnvironment, {
       "--content-file": fromFile,
-      "--environment-id": to
+      "--environment-id": to,
     });
   }
 
-  async createEnvironmentBackup(env) {
-    console.log(`\n\nCreating backup of ${env} environment. Please wait!\n`);
+  async createEnvironmentBackup(env, verbose = false) {
+    console.log(`Creating backup of ${env} environment. Please wait!`);
     let filename = "";
-    await this.runCommand(COMMANDS.ExportEnvironment, {
-      "--environment-id": env,
-    }, (output) => {
-      const index = output.indexOf("Stored space data to json file");
-      if (index >= 0) {
-        filename = this.sanitizeBackupFilename(output);
-        console.log("Saved to >>", filename);
+    await this.runCommand(
+      COMMANDS.ExportEnvironment,
+      {
+        "--environment-id": env,
+      },
+      (output) => {
+        const index = output.indexOf("Stored space data to json file");
+        if (index >= 0) {
+          filename = this.sanitizeBackupFilename(output);
+          console.log("backup saved to >>", filename);
+        }
+        if (verbose) console.log(output);
       }
-    });
+    );
     return filename;
   }
 
-  sanitizeBackupFilename(output){
+  sanitizeBackupFilename(output) {
     const filenameStart = output.indexOf("contentful-export-");
     const filenameEnd = output.indexOf(".json");
-    const filename = output.substring(filenameStart , filenameEnd + 5);
+    const filename = output.substring(filenameStart, filenameEnd + 5);
     return filename;
   }
 
@@ -140,12 +170,13 @@ class ContentUpdater {
       // TODO add others
     }
   }
-  async runOptional(childProcess, confirmOnError) {
+
+  async catchError(childProcess, confirmOnErrorMessage) {
     return new Promise((resolve, reject) => {
       childProcess
         .then(async (output) => {
           if (output.error) {
-            (await this.ask(confirmOnError))
+            (await this.ask(confirmOnErrorMessage))
               ? resolve(output)
               : reject(output.error);
           }
@@ -174,6 +205,15 @@ class ContentUpdater {
         }
         resolve(this.validateAnwser(awnser, validOption));
         return awnser;
+      });
+    });
+  };
+
+  wait = async (question) => {
+    return new Promise((resolve, reject) => {
+      this.readLine.question(question, async (awnser) => {
+        resolve(null);
+        return null;
       });
     });
   };
