@@ -62,16 +62,17 @@ class ContentUpdater extends ConsoleHelper {
         this.print("Invalid environment index: " + environment);
         return
       }
+      toExport.push(environmentName);
     }
 
     for (const environmentName of toExport) {
       this.header(`Starting ${environmentName} environment export. Please wait!`);
-      await this.createEnvironmentExport(environmentName, "backup");
+      await this.exportEnvironmentToFile(environmentName, "backup");
     }
 
   }
 
-  async createEnvironmentExport(env, backupFolder = "exports/") {
+  async exportEnvironmentToFile(env, backupFolder = "exports/") {
 
     this.runCommand("mkdir " + backupFolder)
 
@@ -115,8 +116,8 @@ class ContentUpdater extends ConsoleHelper {
 
 
     const { from, to } = this.parseFromToEnvironment(updateAction);
-    const fromFname = await this.createEnvironmentExport(from);
-    const toFname = await this.createEnvironmentExport(to);
+    const fromFname = await this.exportEnvironmentToFile(from);
+    const toFname = await this.exportEnvironmentToFile(to);
 
     const result = this.environmentHelper.checkDiferences(from, to, fromFname, toFname);
     this.print("Checking done.")

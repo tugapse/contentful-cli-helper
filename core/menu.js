@@ -1,13 +1,15 @@
+const fs = require('fs');
 const { ConsoleHelper, ConsoleColor } = require("./console-helper");
+
 
 class Menu extends ConsoleHelper {
   events = {};
   readLine = null;
 
   Colors = {
-    MenuTitle:ConsoleColor.Blue,
-    MenuOption:ConsoleColor.LightBlue,
-    MenuBackOption:ConsoleColor.Gray
+    MenuTitle: ConsoleColor.Blue,
+    MenuOption: ConsoleColor.LightBlue,
+    MenuBackOption: ConsoleColor.Gray
   }
 
   constructor(readLine) {
@@ -20,28 +22,25 @@ class Menu extends ConsoleHelper {
   createMenuOptions(menuOptions, initialText = "") {
     return menuOptions.reduce((prev, curr, index) => {
       const endLine = index === menuOptions.length - 1 ? "\n> " : "";
-      return `${prev} ${ this.Colors.MenuOption } ${index}${ConsoleColor.Default} - ${curr} \n ${endLine}`;
+      return `${prev} ${this.Colors.MenuOption} ${index}${ConsoleColor.Default} - ${curr} \n ${endLine}`;
     }, initialText);
   }
 
   showMainMenu = (text = null) => {
 
-    if (text) console.log(text);
+    if (text) this.print(text);
 
     const menuOptions = [
       this.Colors.MenuBackOption + "Exit script",
       "Update environment",
-      "Backup environment",
+      "Export  environment to file",
       "Restore environment from file",
     ];
-    const question = this.createMenuOptions(
-      menuOptions,
+    const question = this.createMenuOptions(menuOptions,
       this.Colors.MenuTitle + "Please select an action:\n "
     );
     this.readLine.question(question, this.handleMainSelection);
   };
-
-
 
   handleMainSelection = (answer) => {
     this.line();
@@ -56,9 +55,10 @@ class Menu extends ConsoleHelper {
           this.showExportMenu();
           break;
         case 3:
+          this.showRestoreMenu();
           break;
         default:
-          this.showMainMenu(ConsoleColor.Yellow + "\nPlease Select a valid option");
+          this.showMainMenu(ConsoleColor.Yellow + "Please Select a valid option");
           break;
       }
       return;
@@ -71,7 +71,7 @@ class Menu extends ConsoleHelper {
     if (text) console.log(text);
 
     const menuOptions = [
-      this.Colors.MenuBackOption  + "<-- Go back",
+      this.Colors.MenuBackOption + "<-- Go back",
       "Update DEV to QA",
       "Update QA to Staging",
       "Update Staging to Preview",
@@ -110,9 +110,8 @@ class Menu extends ConsoleHelper {
     this.showUpdateMenu("\nPlease Select a valid option");
   };
 
-
   showExportMenu(text) {
-    
+
     if (text) this.print(text);
 
     const menuOptions = [
@@ -128,10 +127,10 @@ class Menu extends ConsoleHelper {
       menuOptions,
       this.Colors.MenuTitle + "Select a environment to create backup:\n "
     );
-    this.readLine.question(question, this.handleBackupMenu);
+    this.readLine.question(question, this.handleExportMenu);
   }
 
-  handleBackupMenu = (answer) => {
+  handleExportMenu = (answer) => {
     this.line();
     if (answer) {
       const selection = Number(answer);
@@ -148,13 +147,68 @@ class Menu extends ConsoleHelper {
           this.emmit(MENUS.Export, selection);
           break;
         default:
-          this.showUpdateMenu("\nPlease Select a valid option");
+          this.showExportMenu("\nPlease Select a valid option");
           break;
       }
-      return;
     }
     this.showExportMenu("\nPlease Select a valid option");
 
+  }
+
+  showRestoreMenu = (text = null) => {
+
+    if (text) console.log(text);
+
+    const menuOptions = [
+      this.Colors.MenuBackOption + "<-- Go back",
+      "Restore dev environment",
+      "Restore qa environment",
+      "Restore staging environment",
+      "Restore preview environment",
+      "Restore live environment",
+    ];
+    const question = this.createMenuOptions(menuOptions,
+      this.Colors.MenuTitle + "Please select an action:\n "
+    );
+    this.readLine.question(question, this.handleRestoreMenu);
+  };
+
+  handleRestoreMenu = (answer) => {
+    this.line();
+    if (answer) {
+      const selection = Number(answer);
+      switch (selection) {
+        case 0:
+          this.showMainMenu("Going back :)");
+          break;
+        case 1:
+        case 2:
+        case 3:
+        case 4:
+        case 5:
+          this.getFileToImport()
+          break;
+        default:
+          this.showRestoreMenu("\nPlease Select a valid option");
+          break;
+      }
+    }
+    this.showRestoreMenu("\nPlease Select a valid option");
+
+  }
+
+  getFileToImport(env) {
+    this.readLine.question("Please enter filename to import for\n> ",
+      (file) => {
+        try {
+          fs.accessSync(file)
+        } catch (err) {
+          this.alert("The file " + file + " was not found");
+          this.showExportMenu();
+          return;
+        }         
+         this.emmit(MENUS.Import, file);
+      });
   }
 
 
@@ -185,8 +239,8 @@ class Menu extends ConsoleHelper {
 const MENUS = {
   Main: 0,
   Update: 1,
-  Export:2,
-  Import:3
+  Export: 2,
+  Import: 3
 };
 
 module.exports = { MENUS, Menu };

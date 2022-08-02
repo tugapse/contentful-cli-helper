@@ -18,6 +18,10 @@ class ConsoleHelper {
         console.log(ConsoleColor.LightBlue ,"> ",ConsoleColor.Default, message);
     }
 
+    alert(message, symbol="!", color=ConsoleColor.Red ) {
+        console.log(color,symbol.padEnd(2,symbol), message,symbol.padEnd(2,symbol));
+    }
+
 
     header(message, size, symbol = "#") {
         size = size || message.length + 5;
