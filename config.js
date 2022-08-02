@@ -10,7 +10,8 @@ const Spaces = {
 const Config = {
 
 debug:{
-  showShellCommands:false
+  showShellCommands:false,
+  showUpdateVerbose:false
 },
 
   getSpaceId: (environment) => {

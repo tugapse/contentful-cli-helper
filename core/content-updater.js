@@ -1,13 +1,11 @@
 const { exec } = require("child_process");
 
 const Config = require("../config");
-const {ConsoleHelper, ConsoleColor} = require("./console-helper");
+const { ConsoleHelper, ConsoleColor } = require("./console-helper");
 
 const COMMANDS = {
   RemoveEnvironment: "contentful space environment delete",
   ListSpaces: "contentful space environment list",
-  UseSpace: `contentful space use`,
-  DEVtoQA: `contentful space environment create --name="qa" --environment-id="qa" --source="dev"`,
   FromToEnvironment: `contentful space import`,
   ExportEnvironment: `contentful space export`,
 };
@@ -22,6 +20,8 @@ const UPDATE_ACTION = {
 const ErrorMessages = {
   CreateBackup: "Error creating the backup, continue anyway ? y / n \n>> ",
 };
+
+const AvaliableEnvironments = [null, "dev", "qa", "staging", "preview", "live"];
 
 
 class ContentUpdater extends ConsoleHelper {
@@ -45,21 +45,78 @@ class ContentUpdater extends ConsoleHelper {
       UPDATE_ACTION.StagingToPreview,
       UPDATE_ACTION.PreviewToLive,
     ];
-    const result = await this.updateEnvironment(actions[+command]);
-    this.print(result);
+    await this.updateEnvironment(actions[+command]);
   }
 
+  async parseExportEnvironmentMenuCommand(environmentIndex) {
+    const toExport = [];
+    const index = Number(environmentIndex);
 
+    if (index === AvaliableEnvironments.length) {
+      for (const env of AvaliableEnvironments) {
+        if (env != null ) toExport.push(env);
+      }
+    } else {
+      const environmentName = AvaliableEnvironments[index];
+      if (!environmentName) {
+        this.print("Invalid environment index: " + environment);
+        return
+      }
+    }
+
+    for (const environmentName of toExport) {
+      this.header(`Starting ${environmentName} environment export. Please wait!`);
+      await this.createEnvironmentExport(environmentName, "backup");
+    }
+
+  }
+
+  async createEnvironmentExport(env, backupFolder = "exports/") {
+
+    this.runCommand("mkdir " + backupFolder)
+
+    const spaceId = Config.getSpaceId(env);
+    const comamndArgs = {
+      "--environment-id": env,
+      "--space-id": spaceId,
+      "--export-dir": "./" + backupFolder
+    };
+
+    const hanldeOutput = (output) => {
+      this.tempBuffer += output;
+      const index = output.indexOf("Stored space data to json file");
+      if (index >= 0) {
+        filename = this.sanitizeBackupFilename(output);
+        this.print("Export file saved to >> " + ConsoleColor.Green + backupFolder + filename + ConsoleColor.Default);
+      };
+      if (Config.debug.showUpdateVerbose) console.log(output);
+    }
+
+    this.tempBuffer = "";
+    let filename = "";
+
+    this.print(`Creating backup of ${env} environment. Please wait!`);
+
+    await this.runCommand(COMMANDS.ExportEnvironment, comamndArgs, hanldeOutput);
+    if(!filename){
+      this.print(ConsoleColor.Red + "Error : It was not possible to create export for " + env);
+      this.print(ConsoleColor.Default + this.tempBuffer);
+    }
+
+    return backupFolder + filename;
+  }
 
   async updateEnvironment(updateAction) {
+
     if (!updateAction) {
       return "\n\nPlease provide a valid option!";
     }
 
 
+
     const { from, to } = this.parseFromToEnvironment(updateAction);
-    const fromFname = await this.createEnvironmentBackup(from);
-    const toFname = await this.createEnvironmentBackup(to);
+    const fromFname = await this.createEnvironmentExport(from);
+    const toFname = await this.createEnvironmentExport(to);
 
     const result = this.environmentHelper.checkDiferences(from, to, fromFname, toFname);
     this.print("Checking done.")
@@ -70,13 +127,28 @@ class ContentUpdater extends ConsoleHelper {
       await this.wait("Press ENTER to continue...");
     }
 
-    this.print(ConsoleColor.Yellow + `Are you sure you want to do the update ${from} to ${to} ?`.toUpperCase())
-    if ( await this.ask(ConsoleColor.Default+ "Confirm y/n: ") ) {
+    this.print(`Are you sure you want to do the update ${ConsoleColor.Yellow + from + ConsoleColor.Default} to ${ConsoleColor.Yellow + to + ConsoleColor.Default}?`)
+
+
+    if (await this.ask(ConsoleColor.Default + "Confirm y/n: ")) {
       return await this.runUpdateEnvironmentCommand(fromFname, to);
     }
     this.line();
     return "I see, you are safe for now!";
   }
+
+  async runUpdateEnvironmentCommand(fromFile, to) {
+    this.header(`Starting environment update. Let us pray !`);
+    return this.runCommand(COMMANDS.FromToEnvironment, {
+      "--content-file": fromFile,
+      "--environment-id": to,
+      "--space-id": Config.getSpaceId(to)
+
+    });
+  }
+
+
+
 
   runCommand = async (command, args = null, outputCallback = null) => {
     return new Promise((resolve, reject) => {
@@ -104,62 +176,6 @@ class ContentUpdater extends ConsoleHelper {
     return result;
   }
 
-  async listEnvironments() {
-    throw new Error("Do not use for now!");
-    await this.useSpace();
-
-    const output = await this.runCommand(COMMANDS.ListSpaces);
-    const environments = output.split("\n").reduce((acc, cur) => {
-      if (cur.includes("90m")) return acc;
-      else {
-        return [...acc, cur];
-      }
-    }, []);
-  }
-
-  async removeEnvironment(env) {
-    throw new Error("Do not use for now!");
-    this.print(`Trying to delete environment ${env}.`);
-    return this.runCommand(COMMANDS.RemoveEnvironment, {
-      "--environment-id": env,
-    });
-  }
-
-  async runUpdateEnvironmentCommand(fromFile, to) {
-    this.header(`Starting environment update. Let us pray !`);
-    return this.runCommand(COMMANDS.FromToEnvironment, {
-      "--content-file": fromFile,
-      "--environment-id": to,
-      "--space-id": Config.getSpaceId(to)
-
-    });
-  }
-
-
-  async createEnvironmentBackup(env, verbose = false) {
-    this.tempBuffer = "";
-    const spaceId = Config.getSpaceId(env);
-    this.print(`Creating backup of ${env} environment. Please wait!`);
-    let filename = "";
-    await this.runCommand(
-      COMMANDS.ExportEnvironment,
-      {
-        "--environment-id": env,
-        "--space-id": spaceId
-      },
-      (output) => {
-        this.tempBuffer += output;
-        const index = output.indexOf("Stored space data to json file");
-        if (index >= 0) {
-          filename = this.sanitizeBackupFilename(output);
-          this.print("backup saved to >> " + filename);
-        }
-        // if (verbose) console.log(output);
-      }
-    );
-    if (verbose) console.log(this.tempBuffer);
-    return filename;
-  }
 
   sanitizeBackupFilename(output) {
     const filenameStart = output.indexOf("contentful-export-");
