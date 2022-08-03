@@ -29,8 +29,11 @@ class Main extends ConsoleHelper {
       await this.updater.parseExportEnvironmentMenuCommand(eventData);
       this.menu.showMainMenu();
     });
-   this.print(ConsoleColor.Purple + "All systems ready !");
 
+    this.menu.addEventListener(MENUS.Import, async (eventData) => {
+      this.updater.importEnvironmentFromFile(eventData.env, eventData.filename);
+      this.menu.showMainMenu();
+    });
   }
 
   run() {
@@ -39,12 +42,11 @@ class Main extends ConsoleHelper {
   }
 
   close = () => {
-    this.print( ConsoleColor.Purple + "Closing script. Bye :)");
+    this.print(ConsoleColor.Purple + "Closing script. Bye :)");
     process.exit(0);
   };
 
   initializeInputOutputBuffer() {
-   this.print(ConsoleColor.Purple + "Initializing Buffers ...");
     this.readLine = readline.createInterface({
       input: process.stdin,
       output: process.stdout,

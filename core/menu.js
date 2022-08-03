@@ -1,4 +1,5 @@
 const fs = require('fs');
+const Config = require('../config');
 const { ConsoleHelper, ConsoleColor } = require("./console-helper");
 
 
@@ -48,6 +49,7 @@ class Menu extends ConsoleHelper {
       switch (Number(answer)) {
         case 0:
           this.readLine.close();
+          break;
         case 1:
           this.showUpdateMenu(ConsoleColor.LightBlue + "let's do the update!");
           break;
@@ -125,7 +127,7 @@ class Menu extends ConsoleHelper {
     ];
     const question = this.createMenuOptions(
       menuOptions,
-      this.Colors.MenuTitle + "Select a environment to create backup:\n "
+      this.Colors.MenuTitle + "Select a environment to Export:\n "
     );
     this.readLine.question(question, this.handleExportMenu);
   }
@@ -150,6 +152,7 @@ class Menu extends ConsoleHelper {
           this.showExportMenu("\nPlease Select a valid option");
           break;
       }
+      return;
     }
     this.showExportMenu("\nPlease Select a valid option");
 
@@ -186,19 +189,22 @@ class Menu extends ConsoleHelper {
         case 3:
         case 4:
         case 5:
-          this.getFileToImport()
+          const envs = [null, ...Config.environmentList];
+          this.getFileToImport(envs[selection]);
           break;
         default:
-          this.showRestoreMenu("\nPlease Select a valid option");
+          this.showRestoreMenu("Please Select a valid option");
           break;
       }
+      return;
     }
-    this.showRestoreMenu("\nPlease Select a valid option");
+    this.showRestoreMenu("Please Select a valid option");
 
   }
 
   getFileToImport(env) {
-    this.readLine.question("Please enter filename to import for\n> ",
+    this.readLine.question("Please enter filename to restore " +
+      ConsoleColor.Blue + env + ConsoleColor.Default + " environment\n> ",
       (file) => {
         try {
           fs.accessSync(file)
@@ -206,8 +212,8 @@ class Menu extends ConsoleHelper {
           this.alert("The file " + file + " was not found");
           this.showExportMenu();
           return;
-        }         
-         this.emmit(MENUS.Import, file);
+        }
+        this.emmit(MENUS.Import,{env, file});
       });
   }
 

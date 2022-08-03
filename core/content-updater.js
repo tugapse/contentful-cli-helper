@@ -54,7 +54,7 @@ class ContentUpdater extends ConsoleHelper {
 
     if (index === AvaliableEnvironments.length) {
       for (const env of AvaliableEnvironments) {
-        if (env != null ) toExport.push(env);
+        if (env != null) toExport.push(env);
       }
     } else {
       const environmentName = AvaliableEnvironments[index];
@@ -72,11 +72,12 @@ class ContentUpdater extends ConsoleHelper {
 
   }
 
-  async exportEnvironmentToFile(env, backupFolder = "exports/") {
+  async exportEnvironmentToFile(env, backupFolder = "runtime-exports/") {
 
-    this.runCommand("mkdir " + backupFolder)
+    await this.runCommand("mkdir " + backupFolder)
 
-    const spaceId = Config.getSpaceId(env);
+    const spaceId = Config.getSpaceId(env); 0
+
     const comamndArgs = {
       "--environment-id": env,
       "--space-id": spaceId,
@@ -99,18 +100,19 @@ class ContentUpdater extends ConsoleHelper {
     this.print(`Creating backup of ${env} environment. Please wait!`);
 
     await this.runCommand(COMMANDS.ExportEnvironment, comamndArgs, hanldeOutput);
-    if(!filename){
-      this.print(ConsoleColor.Red + "Error : It was not possible to create export for " + env);
+    if (!filename) {
+      this.print(ConsoleColor.Red + "Error : It was not possible to create export for " + env + " environment!");
       this.print(ConsoleColor.Default + this.tempBuffer);
     }
 
-    return backupFolder + filename;
+    return backupFolder + "/" + filename;
   }
 
   async updateEnvironment(updateAction) {
 
     if (!updateAction) {
-      return "\n\nPlease provide a valid option!";
+      this.print("Please provide a valid option!");
+      return;
     }
 
 
@@ -120,8 +122,10 @@ class ContentUpdater extends ConsoleHelper {
     const toFname = await this.exportEnvironmentToFile(to);
 
     const result = this.environmentHelper.checkDiferences(from, to, fromFname, toFname);
-    this.print("Checking done.")
-    if (!result.equal) {
+
+    if (result.equal) {
+      this.print("Ready to update")
+    } else {
       this.print(
         `\n${result.resultString}\n> We have missing ContentModel Keys in ${to}!\n`
       );
@@ -131,11 +135,19 @@ class ContentUpdater extends ConsoleHelper {
     this.print(`Are you sure you want to do the update ${ConsoleColor.Yellow + from + ConsoleColor.Default} to ${ConsoleColor.Yellow + to + ConsoleColor.Default}?`)
 
 
-    if (await this.ask(ConsoleColor.Default + "Confirm y/n: ")) {
+    if (await this.ask("Confirm y/n: ")) {
       return await this.runUpdateEnvironmentCommand(fromFname, to);
     }
     this.line();
-    return "I see, you are safe for now!";
+    this.print("I see, you are safe for now!");
+  }
+
+  async importEnvironmentFromFile(environmentName, filename){
+
+    const question = "This action will override "+environmentName+" with the content of the file " + filename +" ? ( y/n )\n>";
+    if(await this.ask(question)){
+      await this.runUpdateEnvironmentCommand(filename,environmentName);
+    } 
   }
 
   async runUpdateEnvironmentCommand(fromFile, to) {

@@ -8,7 +8,7 @@ const Spaces = {
 }
 
 const Config = {
-
+environmentList: ["dev","qa","staging","preview","prod"],
 debug:{
   showShellCommands:false,
   showUpdateVerbose:false
