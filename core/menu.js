@@ -213,7 +213,7 @@ class Menu extends ConsoleHelper {
           this.showExportMenu();
           return;
         }
-        this.emmit(MENUS.Import,{env, file});
+        this.emmit(MENUS.Import,{environment:env, filename:file});
       });
   }
 

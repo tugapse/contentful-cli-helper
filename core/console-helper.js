@@ -48,10 +48,9 @@ class ConsoleHelper {
     }
 
     validateAnwser(awnser, correct) {
+        
         return (awnser || "n").toLowerCase() === (correct || "y").toLowerCase();
     }
-
-
 
     ask = async (question, questions = ["y", "n"], validOption = "y") => {
         return new Promise((resolve, reject) => {
@@ -96,4 +95,5 @@ class ConsoleHelper {
         });
     }
 }
+
 module.exports = { ConsoleHelper,ConsoleColor};

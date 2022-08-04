@@ -85,13 +85,16 @@ class ContentUpdater extends ConsoleHelper {
     };
 
     const hanldeOutput = (output) => {
+
       this.tempBuffer += output;
       const index = output.indexOf("Stored space data to json file");
+
       if (index >= 0) {
         filename = this.sanitizeBackupFilename(output);
-        this.print("Export file saved to >> " + ConsoleColor.Green + backupFolder + filename + ConsoleColor.Default);
+        this.print("Export file saved to >> " + ConsoleColor.Green + backupFolder + "/" + filename + ConsoleColor.Default);
       };
       if (Config.debug.showUpdateVerbose) console.log(output);
+
     }
 
     this.tempBuffer = "";
@@ -100,6 +103,7 @@ class ContentUpdater extends ConsoleHelper {
     this.print(`Creating backup of ${env} environment. Please wait!`);
 
     await this.runCommand(COMMANDS.ExportEnvironment, comamndArgs, hanldeOutput);
+
     if (!filename) {
       this.print(ConsoleColor.Red + "Error : It was not possible to create export for " + env + " environment!");
       this.print(ConsoleColor.Default + this.tempBuffer);
@@ -117,7 +121,7 @@ class ContentUpdater extends ConsoleHelper {
 
 
 
-    const { from, to } = this.parseFromToEnvironment(updateAction);
+    const { from, to } = this.yparseFromToEnvironment(updateAction);
     const fromFname = await this.exportEnvironmentToFile(from);
     const toFname = await this.exportEnvironmentToFile(to);
 
@@ -142,12 +146,14 @@ class ContentUpdater extends ConsoleHelper {
     this.print("I see, you are safe for now!");
   }
 
-  async importEnvironmentFromFile(environmentName, filename){
+  async importEnvironmentFromFile(environmentName, filename) {
+    console.log("Coiso", filename)
+    const question = "This action will override " + ConsoleColor.Yellow + environmentName + ConsoleColor.Default +
+      " with the content of the file " + ConsoleColor.Yellow + filename + ConsoleColor.Default + " ? ( y/n )\n>";
 
-    const question = "This action will override "+environmentName+" with the content of the file " + filename +" ? ( y/n )\n>";
-    if(await this.ask(question)){
-      await this.runUpdateEnvironmentCommand(filename,environmentName);
-    } 
+    if (await this.ask(question)) {
+      this.print(await this.runUpdateEnvironmentCommand(filename, environmentName));
+    }
   }
 
   async runUpdateEnvironmentCommand(fromFile, to) {
@@ -159,9 +165,6 @@ class ContentUpdater extends ConsoleHelper {
 
     });
   }
-
-
-
 
   runCommand = async (command, args = null, outputCallback = null) => {
     return new Promise((resolve, reject) => {

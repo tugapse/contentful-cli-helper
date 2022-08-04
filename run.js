@@ -31,7 +31,7 @@ class Main extends ConsoleHelper {
     });
 
     this.menu.addEventListener(MENUS.Import, async (eventData) => {
-      this.updater.importEnvironmentFromFile(eventData.env, eventData.filename);
+      await this.updater.importEnvironmentFromFile(eventData.environment, eventData.filename);
       this.menu.showMainMenu();
     });
   }
