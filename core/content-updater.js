@@ -147,7 +147,6 @@ class ContentUpdater extends ConsoleHelper {
   }
 
   async importEnvironmentFromFile(environmentName, filename) {
-    console.log("Coiso", filename)
     const question = "This action will override " + ConsoleColor.Yellow + environmentName + ConsoleColor.Default +
       " with the content of the file " + ConsoleColor.Yellow + filename + ConsoleColor.Default + " ? ( y/n )\n>";
 
