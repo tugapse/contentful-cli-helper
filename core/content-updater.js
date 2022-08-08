@@ -1,9 +1,11 @@
 const { exec } = require("child_process");
+const { threadId } = require("worker_threads");
 
 const Config = require("../config");
 const { ConsoleHelper, ConsoleColor } = require("./console-helper");
 
 const COMMANDS = {
+  Create: "contentful space environment create",
   RemoveEnvironment: "contentful space environment delete",
   ListSpaces: "contentful space environment list",
   FromToEnvironment: `contentful space import`,
@@ -17,11 +19,11 @@ const UPDATE_ACTION = {
   PreviewToLive: 4,
 };
 
-const ErrorMessages = {
+const Messages = {
   CreateBackup: "Error creating the backup, continue anyway ? y / n \n>> ",
 };
 
-const AvaliableEnvironments = [null, "dev", "qa", "staging", "preview", "live"];
+const AvaliableEnvironments = [null, "dev", "qa", "staging", "preview", "prod"];
 
 
 class ContentUpdater extends ConsoleHelper {
@@ -72,7 +74,7 @@ class ContentUpdater extends ConsoleHelper {
 
   }
 
-  async exportEnvironmentToFile(env, backupFolder = "runtime-exports/") {
+  async exportEnvironmentToFile(env, backupFolder = "runtime-exports") {
 
     await this.runCommand("mkdir " + backupFolder)
 
@@ -119,28 +121,21 @@ class ContentUpdater extends ConsoleHelper {
       return;
     }
 
-
-
-    const { from, to } = this.yparseFromToEnvironment(updateAction);
-    const fromFname = await this.exportEnvironmentToFile(from);
-    const toFname = await this.exportEnvironmentToFile(to);
-
-    const result = this.environmentHelper.checkDiferences(from, to, fromFname, toFname);
-
-    if (result.equal) {
-      this.print("Ready to update")
-    } else {
-      this.print(
-        `\n${result.resultString}\n> We have missing ContentModel Keys in ${to}!\n`
-      );
-      await this.wait("Press ENTER to continue...");
-    }
+    const { from, to } = this.parseFromToEnvironment(updateAction);
+    await this.exportEnvironmentToFile(from);
+    await this.exportEnvironmentToFile(to);
 
     this.print(`Are you sure you want to do the update ${ConsoleColor.Yellow + from + ConsoleColor.Default} to ${ConsoleColor.Yellow + to + ConsoleColor.Default}?`)
 
-
     if (await this.ask("Confirm y/n: ")) {
-      return await this.runUpdateEnvironmentCommand(fromFname, to);
+      this.header(`Starting environment update. Let us pray !`);
+      this.print(`Preparing  ${ConsoleColor.Yellow + to + ConsoleColor.Default} for updating`);
+      
+      // lets pass an empty function to supress console output
+      await this.removeEnvironment(to,()=>{});
+      this.print(`Updating ${ConsoleColor.Yellow + to + ConsoleColor.Default} environment. please wait.`);
+      await this.createEnvironment(to, from);
+      return this.wait("Press ENTER to continue...");
     }
     this.line();
     this.print("I see, you are safe for now!");
@@ -151,18 +146,40 @@ class ContentUpdater extends ConsoleHelper {
       " with the content of the file " + ConsoleColor.Yellow + filename + ConsoleColor.Default + " ? ( y/n )\n>";
 
     if (await this.ask(question)) {
-      this.print(await this.runUpdateEnvironmentCommand(filename, environmentName));
+      await this.runUpdateEnvironmentCommand(filename, environmentName);
     }
   }
 
   async runUpdateEnvironmentCommand(fromFile, to) {
     this.header(`Starting environment update. Let us pray !`);
-    return this.runCommand(COMMANDS.FromToEnvironment, {
+    await this.removeEnvironment(to);
+    await this.createEnvironment(to);
+    await this.runCommand(COMMANDS.FromToEnvironment, {
       "--content-file": fromFile,
       "--environment-id": to,
       "--space-id": Config.getSpaceId(to)
-
     });
+    this.line();
+    return this.wait("Press ENTER to continue...");
+  }
+
+  async removeEnvironment(environmnet, outputCallback) {
+    return this.runCommand(COMMANDS.RemoveEnvironment, {
+      "--environment-id": environmnet,
+      "--space-id": Config.getSpaceId(environmnet)
+    }, outputCallback);
+  }
+
+  async createEnvironment(toEnvironment, fromEnvironment) {
+    const commandArgs = {
+      "--name": toEnvironment,
+      "--environment-id": toEnvironment,
+      "--space-id": Config.getSpaceId(toEnvironment),
+    }
+    if (fromEnvironment) {
+      commandArgs["--source"] = fromEnvironment;
+    }
+    await this.runCommand(COMMANDS.Create, commandArgs);
   }
 
   runCommand = async (command, args = null, outputCallback = null) => {

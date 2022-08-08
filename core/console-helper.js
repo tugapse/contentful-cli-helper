@@ -15,18 +15,18 @@ class ConsoleHelper {
 
     print(message, printToConsole = true) {
         if (!printToConsole) return "> " + message
-        console.log(ConsoleColor.LightBlue ,"> ",ConsoleColor.Default, message);
+        console.log(ConsoleColor.LightBlue, "> ", ConsoleColor.Default, message);
     }
 
-    alert(message, symbol="!", color=ConsoleColor.Red ) {
-        console.log(color,symbol.padEnd(2,symbol), message,symbol.padEnd(2,symbol));
+    alert(message, symbol = "!", color = ConsoleColor.Red) {
+        console.log(color, symbol.padEnd(2, symbol), message, symbol.padEnd(2, symbol));
     }
 
 
     header(message, size, symbol = "#") {
-        size = size || message.length + 5;
+        size = size || message.length + 7;
         console.log("\n".padEnd(size + 1, symbol));
-        console.log("# " , ConsoleColor.Green , message , ConsoleColor.Default);
+        console.log("# ", ConsoleColor.Green, message, ConsoleColor.Default,  symbol);
         console.log("".padEnd(size, symbol));
     }
 
@@ -40,7 +40,7 @@ class ConsoleHelper {
     }
 
     bullet(messsage, space = 4) {
-        console.log("*".padStart(space, " ") , messsage)
+        console.log("*".padStart(space, " "), messsage)
     }
 
     buildBullet(messsage, space = 4) {
@@ -48,7 +48,7 @@ class ConsoleHelper {
     }
 
     validateAnwser(awnser, correct) {
-        
+
         return (awnser || "n").toLowerCase() === (correct || "y").toLowerCase();
     }
 
@@ -96,4 +96,4 @@ class ConsoleHelper {
     }
 }
 
-module.exports = { ConsoleHelper,ConsoleColor};
+module.exports = { ConsoleHelper, ConsoleColor };
