@@ -122,38 +122,49 @@ class ContentUpdater extends ConsoleHelper {
     }
 
     const { from, to } = this.parseFromToEnvironment(updateAction);
-    await this.exportEnvironmentToFile(from);
-    await this.exportEnvironmentToFile(to);
+    const fromFile = await this.exportEnvironmentToFile(from);
+    const toFile = await this.exportEnvironmentToFile(to);
 
-    this.print(`Are you sure you want to do the update ${ConsoleColor.Yellow + from + ConsoleColor.Default} to ${ConsoleColor.Yellow + to + ConsoleColor.Default}?`)
+    const result = this.environmentHelper.checkDiferences(from, to, fromFile, toFile);
 
-    if (await this.ask("Confirm y/n: ")) {
-      this.header(`Starting environment update. Let us pray !`);
-      this.print(`Preparing  ${ConsoleColor.Yellow + to + ConsoleColor.Default} for updating`);
-      
-      // lets pass an empty function to supress console output
-      await this.removeEnvironment(to,()=>{});
-      this.print(`Updating ${ConsoleColor.Yellow + to + ConsoleColor.Default} environment. please wait.`);
-      await this.createEnvironment(to, from);
-      return this.wait("Press ENTER to continue...");
+    if(result.equal){
+      this.print(ConsoleColor.Green + "Content model are Equal" + ConsoleColor.Default );
+    }else{
+      this.print(result.resultString);
     }
+
+    const question = `Are you sure you want to do the update ${ConsoleColor.Yellow + from + ConsoleColor.Default} to ${ConsoleColor.Yellow + to + ConsoleColor.Default}?`;
+
+    if (await this.ask(question + " y / n : ")) {
+      this.print(`Updating ${ConsoleColor.Yellow + to + ConsoleColor.Default} environment. please wait.`);
+      return await this.runUpdateEnvironmentCommand(fromFile,to);
+    }
+
     this.line();
     this.print("I see, you are safe for now!");
   }
 
-  async importEnvironmentFromFile(environmentName, filename) {
-    const question = "This action will override " + ConsoleColor.Yellow + environmentName + ConsoleColor.Default +
-      " with the content of the file " + ConsoleColor.Yellow + filename + ConsoleColor.Default + " ? ( y/n )\n>";
+  async importEnvironmentFromFile(toEnvironmentName, fromFilename) {
+
+    const toFile = await this.exportEnvironmentToFile(toEnvironmentName);
+    const result = this.environmentHelper.checkDiferences(null, toEnvironmentName, fromFilename, toFile);
+
+    if(result.equal){
+      this.print(ConsoleColor.Green + "Content model are Equal" + ConsoleColor.Default );
+    }else{
+      this.print(result.resultString);
+    }
+
+    const question = "This action will override " + ConsoleColor.Yellow + toEnvironmentName + ConsoleColor.Default +
+      " with the content of the file " + ConsoleColor.Yellow + fromFilename + ConsoleColor.Default + " ? ( y/n )\n>";
 
     if (await this.ask(question)) {
-      await this.runUpdateEnvironmentCommand(filename, environmentName);
+      await this.runUpdateEnvironmentCommand(fromFilename, toEnvironmentName);
     }
   }
 
   async runUpdateEnvironmentCommand(fromFile, to) {
-    this.header(`Starting environment update. Let us pray !`);
-    await this.removeEnvironment(to);
-    await this.createEnvironment(to);
+    this.header(`Starting update. Let us pray !`);
     await this.runCommand(COMMANDS.FromToEnvironment, {
       "--content-file": fromFile,
       "--environment-id": to,

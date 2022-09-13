@@ -72,8 +72,7 @@ class ConsoleHelper {
     wait = async (question) => {
         return new Promise((resolve, reject) => {
             this.readLine.question(question, async (awnser) => {
-                resolve(null);
-                return null;
+                resolve(awnser);
             });
         });
     };

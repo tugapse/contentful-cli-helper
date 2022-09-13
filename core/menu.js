@@ -213,7 +213,7 @@ class Menu extends ConsoleHelper {
           this.showExportMenu();
           return;
         }
-        this.emmit(MENUS.Import,{environment:env, filename:file});
+        this.emmit(MENUS.Import, { environment: env, filename: file });
       });
   }
 
@@ -237,7 +237,7 @@ class Menu extends ConsoleHelper {
     if (!this.events[eventName]) return;
 
     this.events[eventName].forEach((callback) => {
-      callback(data);
+      if (callback) callback(data);
     });
   }
 }

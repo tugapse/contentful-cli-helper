@@ -1,11 +1,11 @@
 const fs = require('fs');
-const {ConsoleHelper} = require('./console-helper');
+const {ConsoleHelper,ConsoleColor} = require('./console-helper');
 
 
 class EnvironmentHelper extends ConsoleHelper{
 
     checkDiferences(from, to, fromFile, toFile) {
-        this.print("Checking for misssing fields in " + to );
+        this.print(ConsoleColor.Yellow + "Checking for misssing fields in " + to );
         const fromObj = this.loadJsonObject(fromFile).contentTypes;
         const toObj = this.loadJsonObject(toFile).contentTypes;
         return this.checkContentDiferences(fromObj, toObj);
@@ -34,7 +34,9 @@ class EnvironmentHelper extends ConsoleHelper{
             const defaultValue = this.buildHeaderSring("ContentType : " + key);
 
             resultText += result.diffs[key].reduce((acc, curr) => {
-                    return acc + this.buildBullet("field " + curr.id + " is missing. (type = " + curr.type + " )\n");
+                    return acc + this.buildBullet("field " 
+                    +ConsoleColor.Blue + curr.id +ConsoleColor.Default +
+                     " is missing. (type = " + curr.type + " )\n");
                 }, defaultValue+"\n");
             
         }
